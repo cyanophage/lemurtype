@@ -161,7 +161,7 @@ class Record
   property time : Float64
 
   def initialize
-    @typed = 0
+    @typed = 1
     @errors = 0
     @time = 0
   end
@@ -399,8 +399,8 @@ class Typing
         end
         maxcount += 1 if score == max
       end
-      @log += "max is #{max}\n"
-      @log += "n is #{n}, maxcount is #{maxcount}\n"
+      # @log += "max is #{max}\n"
+      # @log += "n is #{n}, maxcount is #{maxcount}\n"
       if maxcount > n
         selection = scores.select{|k,v| v == max}
         keys = selection.keys.shuffle
@@ -409,7 +409,7 @@ class Typing
         end
       else
         scores = scores.to_a.sort_by{|x| x[1]}
-        @log += "#{scores}"
+        # @log += "#{scores}"
         n.times do
           @sentence.add_word(scores.pop[0])
         end
@@ -496,7 +496,7 @@ class Typing
     col = 10
     @database.letters.to_a.sort_by{|x| x[0]}.to_h.each do |char, stats|
       unless char == " "
-        NCurses.print("#{char}    #{stats["count"]}    #{stats["errors"]}    #{(stats["time"]/stats["count"]).round(2)}", row, col)
+        NCurses.print("#{char}    #{stats["count"]}#{" "*(7-stats["count"].to_s.size)}#{stats["errors"]}#{" "*7-stats["errors"].to_s.size}#{(stats["time"]/stats["count"]).round(2)}", row, col)
         row += 1
       end
     end
@@ -630,7 +630,7 @@ class Typing
     end
 
     NCurses.end
-    puts @log
+    # puts @log
   end
 
 end
