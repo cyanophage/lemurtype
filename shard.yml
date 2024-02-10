@@ -1,0 +1,17 @@
+name: lemurtype
+version: 0.1.0
+
+authors:
+  - Cyanophage <github.com/cyanophage>
+
+targets:
+  curses_test:
+    main: src/curses_test.cr
+
+crystal: 1.11.2
+
+dependencies:
+  ncurses:
+    github: SamualLB/ncurses
+
+license: MIT
