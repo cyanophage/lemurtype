@@ -237,6 +237,10 @@ class Typing
     @mode = :options
     @cursor_row = 0
     @cursor_col = 0
+    @pc_prev_row = -1
+    @pc_prev_col = -1
+    @pc_row = -1
+    @row_info = {} of Int32 => Int32
     @word_size = 5 # for calculating wpm from cpm
     @min = Time.utc(2100, 1, 1)
     @max = Time.utc(1970, 1, 1)
@@ -260,16 +264,19 @@ class Typing
     end
   end
 
-  def draw
+  def draw()
     NCurses.clear
     col = 10
     row = 6
+    @row_info = {} of Int32 => Int32
     @sentence.words.each do |word|
       NCurses.set_color
       NCurses.print(word.word, row, col)
       word.row = row
       word.col = col
       col += word.word.size + 1
+      @row_info[row] ||= 0
+      @row_info[row] += word.word.size + 1
       if col > 100
         row += 2
         col = 10
@@ -492,6 +499,7 @@ class Typing
     create_sentence(@test_length)
     draw()
     set_cursor()
+    @pc_row = @sentence.words[0].row + 1
   end
 
   def typing_test(ch)
@@ -509,6 +517,46 @@ class Typing
         NCurses.set_color
         NCurses.print("wpm: #{wpm}", 4, 10)
       end
+      set_cursor()
+    end
+  end
+
+  def pacing_cursor()
+    if @mode == :typing
+      cur = "^"
+      now = Time.utc
+      if now > @min
+        minutes = (now - @min).to_f / 60.0 # minutes since the start
+      else
+        minutes = 0
+      end
+      target = 40 * @word_size # CPM
+      if minutes > 0
+        characters = (minutes * target).floor.to_i
+      else
+        characters = 0
+      end
+      if @pc_prev_row >= 0 && @pc_prev_col >= 0
+        NCurses.print(" ", @pc_prev_row, @pc_prev_col)
+      end
+      tmp = characters
+      total = 0
+      @row_info.each do |row, count|
+        total += count
+        if tmp < count
+          @pc_row = row+1
+          break
+        end
+        if tmp > count
+          tmp -= count
+        end
+      end
+      if characters < total
+        NCurses.print(cur, @pc_row, 10+tmp)
+      end
+      @pc_prev_row = @pc_row
+      @pc_prev_col = 10+tmp
+      # NCurses.print("row:#{@pc_row}, col:#{tmp}",2,2)
       set_cursor()
     end
   end
@@ -676,8 +724,10 @@ class Typing
           update_database()
           @mode = :options
           options_menu()
+        else
+          pacing_cursor()
+          typing_test(ch)
         end
-        typing_test(ch)
       when :results
         @mode = :options
         options_menu()
@@ -709,7 +759,6 @@ class Typing
     end
 
     NCurses.end
-    # puts @log
   end
 
 end
