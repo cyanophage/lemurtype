@@ -6,7 +6,7 @@ authors:
 
 targets:
   curses_test:
-    main: src/curses_test.cr
+    main: src/lemurtype.cr
 
 crystal: 1.11.2
 
@@ -14,4 +14,4 @@ dependencies:
   ncurses:
     github: SamualLB/ncurses
 
-license: MIT
+license: GPL-3.0
