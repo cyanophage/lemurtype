@@ -263,7 +263,7 @@ class Typing
   def draw
     NCurses.clear
     col = 10
-    row = 10
+    row = 6
     @sentence.words.each do |word|
       NCurses.set_color
       NCurses.print(word.word, row, col)
@@ -286,7 +286,7 @@ class Typing
   def show_results()
     NCurses.clear
     NCurses.set_color 1
-    row = 10
+    row = 6
     col = 10
     wpm = calculate_wpm()
     @database.history[Time.utc.to_unix] = wpm
@@ -366,6 +366,29 @@ class Typing
       @log += "#{char}\t#{stats["count"]}\t#{stats["time"]}\t#{stats["errors"]}\n"
     end
 
+  end
+
+  def letter_practice(ch)
+    NCurses.clear
+    @sentence = Sentence.new
+    @min = Time.utc(2100, 1, 1)
+    @max = Time.utc(1970, 1, 1)
+    @chars = 0
+    list = [] of String
+    @database.words.each do |word, record|
+      if word.includes?(ch)
+        list << word
+      end
+    end
+    while list.size < @test_length
+      list << list.sample
+    end
+    list = list.shuffle
+    @test_length.times do
+      @sentence.add_word(list.pop)
+    end
+    draw()
+    set_cursor()
   end
 
   def create_sentence(n)
@@ -484,33 +507,80 @@ class Typing
       wpm = calculate_wpm()
       if @max > @min
         NCurses.set_color
-        NCurses.print("wpm: #{wpm}", 8, 10)
+        NCurses.print("wpm: #{wpm}", 4, 10)
       end
       set_cursor()
     end
   end
 
-  def letter_stats()
+  def letter_stats(n)
     NCurses.clear
-    row = 10
+    row = 6
     col = 10
-    @database.letters.to_a.sort_by{|x| x[0]}.to_h.each do |char, stats|
+    if n == 1
+      sorted = @database.letters.to_a.sort_by{|x| x[0]}.to_h
+    elsif n == 2
+      sorted = @database.letters.to_a.sort_by{|x| -x[1]["count"]}.to_h
+    elsif n == 3
+      sorted = @database.letters.to_a.sort_by{|x| -x[1]["errors"]}.to_h
+    elsif n == 4
+      sorted = @database.letters.to_a.sort_by{|x| x[1]["time"]/x[1]["count"]}.to_h
+    else
+      sorted = @database.letters.to_a.sort_by{|x| x[0]}.to_h
+    end
+    NCurses.set_color 1
+    NCurses.print("char   count   errors  speed",row-1,col)
+    NCurses.set_color
+    sorted.each do |char, stats|
       unless char == " "
-        NCurses.print("#{char}    #{stats["count"]}#{" "*(7-stats["count"].to_s.size)}#{stats["errors"]}#{" "*7-stats["errors"].to_s.size}#{(stats["time"]/stats["count"]).round(2)}", row, col)
+        NCurses.print("#{char}      #{stats["count"]}#{" "*(8-stats["count"].to_s.size)}#{stats["errors"]}#{" "*(8-stats["errors"].to_s.size)}#{(stats["time"]/stats["count"]).round(2)}", row, col)
         row += 1
       end
     end
+    row += 1
+    NCurses.print("1 sort by letter",row,col)
+    row += 1
+    NCurses.print("2 sort by count",row,col)
+    row += 1
+    NCurses.print("3 sort by errors",row,col)
+    row += 1
+    NCurses.print("4 sort by speed",row,col)
+    row += 1
+    NCurses.print("a-z to practice on that letter",row,col)
   end
 
   def history()
     NCurses.clear
-    row = 10
+    row = 6
     col = 10
     history = @database.history
+    idx = 1
+    sigma_x = 0
+    sigma_y = 0
+    sigma_x2 = 0
+    sigma_xy = 0
+    n = 0
     history.each do |time, wpm|
-      NCurses.print("#{time}        #{wpm}", row, col)
+      t = Time.unix(time)
+      NCurses.print("#{t.year}-#{"%02d" % t.month}-#{"%02d" % t.day} #{idx} : #{wpm}", row, col)
+      sigma_x += idx
+      sigma_x2 += (idx*idx)
+      sigma_y += wpm
+      sigma_xy += wpm * idx
+      n += 1
+      idx += 1
       row += 1
-      break if row > 50
+      if row > 50
+        row = 6
+        col += 30
+      end
+    end
+    if n * sigma_x2 - sigma_x * sigma_x != 0
+			a = (sigma_y*sigma_x2 - sigma_x*sigma_xy) / (n*sigma_x2 - sigma_x*sigma_x)
+			b = (n*sigma_xy - sigma_x*sigma_y) / (n*sigma_x2 - sigma_x*sigma_x)
+
+      NCurses.print("Improving by #{(10*b).round(2)} wpm every 10 tests", 3, 10)
+      NCurses.print("a = #{a.round(1)}, b = #{b.round(3)}", 4, 10)
     end
   end
 
@@ -538,7 +608,7 @@ class Typing
     rscores = scores.to_a.sort_by{|x| -x[1]}
 
     col = 10
-    row = 10
+    row = 6
     NCurses.print("Best words:",row-2,col)
     scores.each do |tuple|
       NCurses.print("#{tuple[0]}#{" "*(20-tuple[0].size)}#{tuple[1].round(2)}",row, col)
@@ -546,8 +616,8 @@ class Typing
       break if row > 50
     end
 
-    col = 40
-    row = 10
+    col = 45
+    row = 6
     NCurses.print("Worst words:",row-2,col)
     rscores.each do |tuple|
       if tuple[1] < 1e9
@@ -562,7 +632,7 @@ class Typing
   def options_menu()
     NCurses.clear
     col = 10
-    row = 10
+    row = 6
     NCurses.set_color
     NCurses.print("1) Typing test", row, col)
     NCurses.print("2) Word stats", row+1, col)
@@ -594,7 +664,7 @@ class Typing
           word_stats()
         when '3'
           @mode = :letterstats
-          letter_stats()
+          letter_stats(1)
         when '4'
           @mode = :history
           history()
@@ -620,6 +690,15 @@ class Typing
         if ch.to_s == "Esc"
           @mode = :options
           options_menu()
+        end
+        if ch.is_a?(Char)
+          if ch.ord >= 49 && ch.ord <= 52
+            letter_stats(ch.ord-48)
+          end
+          if ch.ord >= 97 && ch.ord <= 122
+            letter_practice(ch)
+            @mode = :typing
+          end
         end
       when :history
         if ch.to_s == "Esc"
