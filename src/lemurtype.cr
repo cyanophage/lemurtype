@@ -187,7 +187,7 @@ class Database
   end
 
   def add_letter(char, stats)
-    ch = char.to_s
+    ch = char.to_s.downcase
     @letters[ch] ||= {} of String => Int32|Float64
     stats.each do |key, value|
       if value.is_a?(Int32)
@@ -530,7 +530,13 @@ class Typing
       else
         minutes = 0
       end
-      target = 40 * @word_size # CPM
+      # speed = 40
+      if @database.history.values.size < 10
+        speed = @database.history.values.sum/@database.history.values.size
+      else
+        speed = @database.history.values[-10..-1].sum/10.0
+      end
+      target = speed * @word_size # CPM
       if minutes > 0
         characters = (minutes * target).floor.to_i
       else
@@ -570,7 +576,7 @@ class Typing
     elsif n == 2
       sorted = @database.letters.to_a.sort_by{|x| -x[1]["count"]}.to_h
     elsif n == 3
-      sorted = @database.letters.to_a.sort_by{|x| -x[1]["errors"]}.to_h
+      sorted = @database.letters.to_a.sort_by{|x| -x[1]["errors"]/x[1]["count"]}.to_h
     elsif n == 4
       sorted = @database.letters.to_a.sort_by{|x| x[1]["time"]/x[1]["count"]}.to_h
     else
@@ -581,7 +587,8 @@ class Typing
     NCurses.set_color
     sorted.each do |char, stats|
       unless char == " "
-        NCurses.print("#{char}      #{stats["count"]}#{" "*(8-stats["count"].to_s.size)}#{stats["errors"]}#{" "*(8-stats["errors"].to_s.size)}#{(stats["time"]/stats["count"]).round(2)}", row, col)
+        error_pc = (100*stats["errors"]/stats["count"]).round(1)
+        NCurses.print("#{char}      #{stats["count"]}#{" "*(8-stats["count"].to_s.size)}#{error_pc}%%#{" "*(8-error_pc.to_s.size)}#{(stats["time"]/stats["count"]).round(2)}", row, col)
         row += 1
       end
     end
@@ -595,6 +602,8 @@ class Typing
     NCurses.print("4 sort by speed",row,col)
     row += 1
     NCurses.print("a-z to practice on that letter",row,col)
+    row += 1
+    NCurses.print("esc to go back to the main menu",row,col)
   end
 
   def history()
