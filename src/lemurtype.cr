@@ -345,6 +345,7 @@ end
 class Typing
   @word_list : String
   @test_length : Int32
+  @default_difficulty : Float64
   def initialize
     @config = "config.yaml"
     if File.exists?(@config)
@@ -355,6 +356,7 @@ class Typing
     end
     @word_list = hash["word_list"].as_s
     @test_length = hash["test_length"].as_i
+    @default_difficulty = hash["default_difficulty"].as_f
     @store = "database3-#{File.basename(@word_list)}.yaml"
     @database = Database.new
     @sentence = Sentence.new
@@ -784,7 +786,8 @@ class Typing
         # score = last_seen + stability - current_test + 5*(1-difficulty)
         if records.is_a?(Array)
           if records.size == 0
-            score = current_test - last_seen + 200 * 0.5
+            # TODO make this changeable in the config file
+            score = current_test - last_seen + 200 * @default_difficulty # default difficulty for words we have no data from yet 
           else
             score = current_test - last_seen + 200 * difficulty
           end
@@ -809,16 +812,26 @@ class Typing
       end
 
       scores_a = scores.to_a.shuffle.sort_by{|x| -x[1]}
+      # scores_a.each do |pair|
+      #   @log += "#{pair[0]}\t#{pair[1]}\n"
+      # end
+      # @log += "\n----\n"
       i = 0
+      # @log += "max: #{max}\n"
       while @sentence.length < n && i < scores_a.size && scores_a.size > 0
-        if rand < scores_a[i][1] * max * 2
+        r = rand
+        # @log += "i:#{i} #{scores_a[i][0]} #{scores_a[i][1]} < #{r*max*100}\n"
+        if scores_a[i][1] < r * max * 2
           @sentence.add_word(scores_a[i][0])
+          # @log += "adding word #{scores_a[i][0]} #{i}\n"
           scores_a.delete_at(i)
+          i -= 1
         end
         i += 1
       end
       while @sentence.length < n
         @sentence.add_word(@database.random)
+        # @log += "adding random word\n"
       end
       @sentence.words.shuffle!
 
