@@ -1,4 +1,4 @@
 ---
 word_list: "text-en-1k.txt"
 test_length: 24
-default_difficulty: 0.25
+default_difficulty: 0.1

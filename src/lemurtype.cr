@@ -737,7 +737,7 @@ class Typing
   def create_sentence(n)
     @sentence = Sentence.new
     total_visit = 0
-    max = 100000
+    max = 0.0
     maxcount = 0
     @database.words.each do |word, hash|
       list = hash["records"]
@@ -820,8 +820,8 @@ class Typing
       # @log += "max: #{max}\n"
       while @sentence.length < n && i < scores_a.size && scores_a.size > 0
         r = rand
-        # @log += "i:#{i} #{scores_a[i][0]} #{scores_a[i][1]} < #{r*max*100}\n"
-        if scores_a[i][1] < r * max * 2
+        # @log += "i:#{i} #{scores_a[i][1]}\t r:#{r}\t#{scores_a[i][0]}\t#{(scores_a[i][1] / (1.5 * max))}\n"
+        if r < (scores_a[i][1] / (1.5 * max))
           @sentence.add_word(scores_a[i][0])
           # @log += "adding word #{scores_a[i][0]} #{i}\n"
           scores_a.delete_at(i)
