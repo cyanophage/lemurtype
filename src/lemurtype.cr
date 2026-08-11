@@ -588,7 +588,7 @@ class Typing
         end
       end
     end
-    @log += "mean diff: #{mean_diff}\tmedian diff: #{median_diff}\n"
+    # @log += "mean diff: #{mean_diff}\tmedian diff: #{median_diff}\n"
     char_stats = {} of String => Hash(String, Int32|Float64)
     prev_time = Time.utc(1970,1,1)
     @sentence.get_all.each do |tuple|
@@ -806,7 +806,6 @@ class Typing
           end
         end
         scores[word] = score
-        # @log += "#{word}\t#{score}\n"
       end
 
       scores_a = scores.to_a.shuffle.sort_by{|x| -x[1]}
@@ -817,7 +816,6 @@ class Typing
           scores_a.delete_at(i)
         end
         i += 1
-        # i = 0 if i >= scores_a.size
       end
       while @sentence.length < n
         @sentence.add_word(@database.random)
@@ -852,7 +850,7 @@ class Typing
   end
 
   def draw_char(c)
-    if c.ord.to_s == "127"
+    if c.ord.to_s == "127" # backspace
       # get the character from the dictionary word and print that
       spointer = @sentence.pointer
       wpointer = @sentence.words[spointer].pointer - 1
@@ -867,6 +865,7 @@ class Typing
         @chars += 1
         NCurses.set_color 1
       else
+        c = '_' if c == ' '
         NCurses.set_color 2
       end
       NCurses.print(c.to_s, @cursor_row, @cursor_col)
@@ -1193,7 +1192,7 @@ class Typing
     col = 10
     row = 6
     row_cap = 60
-    NCurses.print("Fast words:",row-2,col)
+    NCurses.print("Fast words:         cpm",row-2,col)
     speeds.each do |tuple|
       next if tuple[1] < 0
       NCurses.print("#{tuple[0]}#{" "*(20-tuple[0].size)}#{tuple[1].round(2)}",row, col)
@@ -1203,7 +1202,7 @@ class Typing
 
     col = 45
     row = 6
-    NCurses.print("Slow words:",row-2,col)
+    NCurses.print("Slow words:         cpm",row-2,col)
     rspeeds.each do |tuple|
       next if tuple[1] < 0
       if tuple[1] < 1e9
@@ -1215,7 +1214,7 @@ class Typing
 
     col = 80
     row = 6
-    NCurses.print("Worst words:",row-2,col)
+    NCurses.print("Worst words:        err",row-2,col)
     error_rate.each do |tuple|
       next if tuple[1] < 0
       if tuple[1] < 1e9
@@ -1236,18 +1235,7 @@ class Typing
       break if row > row_cap
     end
 
-    # if visits.size > 0
-    #   col = 80
-    #   row = 6
-    #   NCurses.print("Unknown:",row-2,col)
-    #   visits.each do |word,count|
-    #     if count == 0
-    #       NCurses.print("#{word}#{" "*(20-word.size)}#{count}",row, col)
-    #       row += 1
-    #     end
-    #     break if row > 50
-    #   end
-    # end
+    NCurses.print("Esc) Back to main menu", row+4, 10)
 
   end
 
@@ -1344,7 +1332,10 @@ class Typing
     end
     row += 2
     NCurses.set_color
-    NCurses.print("double tap Esc to go back to settings",row,col)
+    NCurses.print("type a letter to adjust its filter",row,col)
+    NCurses.print("red means tests won't contain words with this letter",row+2,col)
+    NCurses.print("green means tests will contain words that contain this letter",row+3,col)
+    NCurses.print("double tap Esc to go back to settings",row+5,col)
   end
 
   def toggle_filter(ch)
